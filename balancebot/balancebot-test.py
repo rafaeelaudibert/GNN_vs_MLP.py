@@ -17,7 +17,7 @@ def main():
     model = deepq.models.mlp([16, 16])
  
     # train the agent on the environment
-    act = deepq.load("balance.pkl")
+    act = deepq.load("done.pkl")
 
     obs = env.reset()
     while True:
