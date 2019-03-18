@@ -49,7 +49,7 @@ class BalancebotEnv(gym.Env):
     p.setGravity(0, 0, -10) # m/s^2
     p.setTimeStep(0.01) # sec
   
-    planeId = p.loadURDF("plane.urdf")
+    p.loadURDF("plane.urdf")
     cubeStartPos = [0, 0, 0.001]
     cubeStartOrientation = p.getQuaternionFromEuler([0, 0, 0])
   
@@ -87,20 +87,20 @@ class BalancebotEnv(gym.Env):
                               targetVelocity=-vt)
 
   def _compute_observation(self):
-    cubePos, cubeOrn = p.getBasePositionAndOrientation(self.botId)
+    _, cubeOrn = p.getBasePositionAndOrientation(self.botId)
     cubeEuler = p.getEulerFromQuaternion(cubeOrn)
-    linear, angular = p.getBaseVelocity(self.botId)
+    _, angular = p.getBaseVelocity(self.botId)
     return [cubeEuler[X], angular[X], self.vt]
 
 
   def _compute_reward(self):
-    cubePos, cubeOrn = p.getBasePositionAndOrientation(self.botId)
+    _, cubeOrn = p.getBasePositionAndOrientation(self.botId)
     cubeEuler = p.getEulerFromQuaternion(cubeOrn)
-    linearVel, angularVel = p.getBaseVelocity(self.botId)    
+
+    # could also be 1 - abs(cubeEuler[X])
     reward =  (math.pi/2 - abs(cubeEuler[X])) * 0.1 - abs(self.vt - self.vd) * 0.1
 
-    # could also be pi/2 - abs(cubeEuler[X])
-    # return (1 - abs(cubeEuler[X])) * 0.1 -  abs(self.vt - self.vd) * 0.01
+    
     return reward
 
   def _compute_done(self):
