@@ -8,9 +8,7 @@ import os
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-X = 0
-Y = 1
-Z = 2
+X, Y, Z = range(3)
  
 class BalancebotEnv(gym.Env):
   metadata = {
