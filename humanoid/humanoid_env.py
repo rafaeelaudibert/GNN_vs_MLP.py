@@ -20,6 +20,7 @@ MOTOR_NAMES =  ["abdomen_z", "abdomen_y", "abdomen_x", \
                     "right_shoulder1", "right_shoulder2", "right_elbow", \
                     "left_shoulder1", "left_shoulder2", "left_elbow"]
 MOTOR_POWERS = [100, 100, 100, 100, 100, 300, 200, 100, 100, 300, 200, 25, 25, 25, 25, 25, 25]
+LINEAR_VEL_MAX = 4
  
 class HumanoidEnv(gym.Env):
   metadata = {
@@ -144,10 +145,12 @@ class HumanoidEnv(gym.Env):
 
 
   def _compute_reward(self):
-    cubePos, _ = p.getBasePositionAndOrientation(self.botId)
+    cubePos, quaternOrn = p.getBasePositionAndOrientation(self.botId)
+    cubeOrn = p.getEulerFromQuaternion(quaternOrn)
     linearVel, _ = p.getBaseVelocity(self.botId)
 
-    self._reward = linearVel[X] - (10 + (cubePos[X] * 10 / (self._envStepCounter + 1)))
+    self._reward = min(linearVel[X], LINEAR_VEL_MAX) - (0.005 * (linearVel[X] ** 2 + linearVel[Y] ** 2)) - (0.05 * cubePos[Y] ** 2) \
+                    - (0.02 * sum([c ** 2 for c in cubeOrn])) + 0.02 
     return self._reward
 
   def _compute_done(self):
