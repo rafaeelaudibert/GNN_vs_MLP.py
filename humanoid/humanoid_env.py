@@ -37,7 +37,8 @@ class HumanoidEnv(gym.Env):
     self.observation_space = spaces.Box(-10, +10, (43, ))   # Observations will be taken in a [-10, 10] range
 
     self._observation = []                                  # Array which stores the observations
-    self._envStepCounterLimit = envStepCounterLimit         # Maximum frames which the env will try to run, before it's done (default 10_000)
+    self._envStepCounterLimit = envStepCounterLimit         # Maximum frames which the env will try to run, before it's done (default 2_048)
+    self._rewards = []                                      # Reward placeholder
 
     self.physicsClient = p.connect(connection)                   # Create the pyBullet physics client
     p.setAdditionalSearchPath(pybullet_data.getDataPath())  # Used to load some default models from pyBullet (such as the field)
@@ -58,9 +59,13 @@ class HumanoidEnv(gym.Env):
     return np.array(self._observation), reward, done, {}
 
   def reset(self):
+    if len(self._rewards) > 1:
+      print(f"[Last Reward] {(sum(self._rewards) / len(self._rewards)):.6f}")
+      
     self.initial_position = None
     self._actions = np.zeros((17,))
     self._envStepCounter = 0
+    self._rewards = []
   
     p.resetSimulation()
     p.setGravity(0, 0, -10) # m/s^2
@@ -146,12 +151,12 @@ class HumanoidEnv(gym.Env):
     cubeOrn = p.getEulerFromQuaternion(quaternOrn)
     linearVel, _ = p.getBaseVelocity(self.botId)
 
-    self._reward = min(linearVel[X], LINEAR_VEL_MAX) - (0.005 * (linearVel[X] ** 2 + linearVel[Y] ** 2)) - (0.05 * cubePos[Y] ** 2) \
-                    - (0.02 * sum([c ** 2 for c in cubeOrn])) + 0.02 
-    return self._reward
+    self._rewards.append(min(linearVel[X], LINEAR_VEL_MAX) - (0.005 * (linearVel[X] ** 2 + linearVel[Y] ** 2)) - (0.05 * cubePos[Y] ** 2) \
+                    - (0.02 * sum([c ** 2 for c in cubeOrn])) + 0.02) 
+    return self._rewards[-1]
 
   def _compute_done(self):
-    cubePos, _ = p.getBasePositionAndOrientation(self.botId)
+    cubePos, _ = p.getBasePositionAndOrientation(self.botId)    
 
     # Enough steps or below ground, or too high
     done = self._envStepCounter >= self._envStepCounterLimit or cubePos[Z] < -0.1 or cubePos[Z] > 3 
