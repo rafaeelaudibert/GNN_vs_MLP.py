@@ -6,7 +6,7 @@ import baselines.common.tf_util as U
 import tensorflow as tf  # pylint: ignore-module
 
 ## Constants
-NUM_TIMESTEPS = 300_000
+NUM_TIMESTEPS = 50_000_000
 MODEL_PATH = './saver/humanoid.tf'
  
 # Copiado de https://github.com/openai/baselines/blob/master/baselines/ppo1/run_humanoid.py:40~45
