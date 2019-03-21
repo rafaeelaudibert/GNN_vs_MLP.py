@@ -28,7 +28,7 @@ class HumanoidEnv(gym.Env):
     'video.frames_per_second' : 50
   }
  
-  def __init__(self, envStepCounterLimit = 2_048):
+  def __init__(self, envStepCounterLimit = 2_048, connection=p.DIRECT):
     """
       HumanoidEnv initialization method, which creates the self.action_space and the self.observation_space variables,
       as well as connect to the pyBullet physics client
@@ -39,7 +39,7 @@ class HumanoidEnv(gym.Env):
     self._observation = []                                  # Array which stores the observations
     self._envStepCounterLimit = envStepCounterLimit         # Maximum frames which the env will try to run, before it's done (default 10_000)
 
-    self.physicsClient = p.connect(p.GUI)                   # Create the pyBullet physics client
+    self.physicsClient = p.connect(connection)                   # Create the pyBullet physics client
     p.setAdditionalSearchPath(pybullet_data.getDataPath())  # Used to load some default models from pyBullet (such as the field)
 
     self._seed()                                            # Configure the seed (random number generator)
@@ -63,16 +63,12 @@ class HumanoidEnv(gym.Env):
     self._envStepCounter = 0
   
     p.resetSimulation()
-    print("[RESET]")
     p.setGravity(0, 0, -10) # m/s^2
     p.setTimeStep(0.01) # sec
   
-    p.loadURDF("plane.urdf")
-
-    cubeStartPos, cubeStartOrientation = [0, 0, 0.001], p.getQuaternionFromEuler([0, 0, 0])
+    self.plane = p.loadURDF("plane.urdf")
     self.botId = p.loadMJCF(os.path.join(os.path.abspath(os.path.dirname(__file__)), "humanoid.xml"),
                             flags = p.URDF_USE_SELF_COLLISION_EXCLUDE_ALL_PARENTS)[0]
-    p.resetBasePositionAndOrientation(self.botId, cubeStartPos, cubeStartOrientation)
 
     self.ordered_joints = []
     self.ordered_joint_indices = []
@@ -82,14 +78,15 @@ class HumanoidEnv(gym.Env):
         # Grab JointInformation
         info = p.getJointInfo(self.botId, j)
         link_name = info[12].decode("ascii")
-
-        # Configure foots (used for collision with the terrain)
-        if link_name=="left_foot": self.left_foot_index = j
-        if link_name=="right_foot": self.right_foot_index = j
         self.ordered_joint_indices.append(j)
 
+        # Configure foots (used for collision with the terrain)
+        if link_name == "left_foot": self.left_foot_index = j
+        if link_name == "right_foot": self.right_foot_index = j
+
         if info[2] == p.JOINT_REVOLUTE:
-            joint_dict[info[1].decode("ascii")] = j
+            joint_name = info[1].decode("ascii")
+            joint_dict[joint_name] = j
             self.ordered_joints.append( (j, info[8], info[9]) ) # (Index, Joint Lower Limit, Joint Higher Limit)
             
             # Reset forces
@@ -155,7 +152,7 @@ class HumanoidEnv(gym.Env):
 
   def _compute_done(self):
     cubePos, _ = p.getBasePositionAndOrientation(self.botId)
-    done = self._envStepCounter >= self._envStepCounterLimit or cubePos[Z] < -0.1 or cubePos[Z] > 3 # Enough steps or below ground, or too high
-    if done:
-      print(f"[Final Reward] {self._reward} - LinearVel[X]: {p.getBaseVelocity(self.botId)[0][X]}")
+
+    # Enough steps or below ground, or too high
+    done = self._envStepCounter >= self._envStepCounterLimit or cubePos[Z] < -0.1 or cubePos[Z] > 3 
     return done 
