@@ -28,7 +28,7 @@ class HumanoidEnv(gym.Env):
     'video.frames_per_second' : 50
   }
  
-  def __init__(self, envStepCounterLimit = 2_048, connection=p.DIRECT):
+  def __init__(self, envStepCounterLimit = 65_536, connection=p.DIRECT):
     """
       HumanoidEnv initialization method, which creates the self.action_space and the self.observation_space variables,
       as well as connect to the pyBullet physics client
@@ -44,6 +44,7 @@ class HumanoidEnv(gym.Env):
     p.setAdditionalSearchPath(pybullet_data.getDataPath())  # Used to load some default models from pyBullet (such as the field)
 
     self._seed()                                            # Configure the seed (random number generator)
+    self.reset()
  
   def step(self, action):
     """
@@ -88,6 +89,7 @@ class HumanoidEnv(gym.Env):
         # Configure foots (used for collision with the terrain)
         if link_name == "left_foot": self.left_foot_index = j
         if link_name == "right_foot": self.right_foot_index = j
+        if link_name == "head": self.head_index = j
 
         if info[2] == p.JOINT_REVOLUTE:
             joint_name = info[1].decode("ascii")
@@ -133,7 +135,7 @@ class HumanoidEnv(gym.Env):
         self.initial_position = body_xyz
 
     (vx, vy, vz), _ = p.getBaseVelocity(self.botId)        
-    extra_info = np.array([body_xyz[Z] - self.initial_position[Z], 0.1*vx, 0.1*vy, 0.1*vz, qx, qy, qz])
+    extra_info = np.array([0.1 * (body_xyz[X] - self.initial_position[X]), 0.1*vx, 0.1*vy, 0.1*vz, qx, qy, qz])
 
     return np.clip(np.concatenate([joints] + [feet_contact] + [extra_info]), -10, +10)
 
@@ -156,8 +158,11 @@ class HumanoidEnv(gym.Env):
     return self._rewards[-1]
 
   def _compute_done(self):
-    cubePos, _ = p.getBasePositionAndOrientation(self.botId)    
+    cubePos, _ = p.getBasePositionAndOrientation(self.botId)
+    headPos = p.getLinkState(self.botId, self.head_index)[0]
+    footPos = p.getLinkState(self.botId, self.right_foot_index)[0]
 
     # Enough steps or below ground, or too high
-    done = self._envStepCounter >= self._envStepCounterLimit or cubePos[Z] < -0.1 or cubePos[Z] > 3 
+    done = self._envStepCounter >= self._envStepCounterLimit or headPos[Z] < 0.9
+    #done = self._envStepCounter >= headPos[Z] < 1.1 # Should be headPos[Z] - groundPos[Z]
     return done 
