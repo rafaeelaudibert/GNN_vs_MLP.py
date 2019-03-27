@@ -1,1 +1,6 @@
 .vscode/
+/*/saver/*
+/*/saver-old/*
+/*/*.out
+/*/*.err
+/*/__pycache__/*
